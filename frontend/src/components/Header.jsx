@@ -36,7 +36,7 @@ const Header = ({
               WayOff <span className="text-ink-muted font-body text-sm">&middot; Cadastral Land Parcel Registry</span>
             </h1>
             <p className="text-xs text-ink-muted">
-              Vertical property records (ULPIN) &middot; WGS 84 / EPSG:4326 &middot; {totalParcels} parcels on record &middot; {disputedCount} with title under dispute
+              भूकर भूखंड पंजी &middot; Vertical property records (ULPIN) &middot; WGS 84 / EPSG:4326 &middot; {totalParcels} parcels on record &middot; {disputedCount} with title under dispute
             </p>
           </div>
         </div>
