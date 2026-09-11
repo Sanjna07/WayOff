@@ -117,7 +117,7 @@ function App() {
       {/* Footer */}
       <footer className="border-t border-rule py-3 px-6 text-center text-xs text-ink-faint">
         <p>
-          National Cadastral Land Parcel Registry &middot; ULPIN integrated 3D framework &middot; WGS 84 (EPSG:4326)
+          WayOff &middot; Cadastral Land Parcel Registry &middot; ULPIN integrated 3D framework &middot; WGS 84 (EPSG:4326)
         </p>
       </footer>
     </div>
