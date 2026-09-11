@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Polygon, Popup, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 /**
@@ -34,7 +34,7 @@ const MapBoundsFitter = ({ buildings }) => {
           [minLat, minLng],
           [maxLat, maxLng]
         ],
-        { padding: [50, 50] }
+        { padding: [60, 60] }
       );
     }
   }, [buildings, map]);
@@ -43,140 +43,120 @@ const MapBoundsFitter = ({ buildings }) => {
 };
 
 /**
- * MapView Component
+ * MapView Component (Government GIS Cadastral View)
  * 
- * Renders a 2D interactive OpenStreetMap parcel map using Leaflet and react-leaflet.
+ * Renders an interactive OpenStreetMap 2D parcel footprint map using Leaflet.
+ * Clean layout with zero intrusive floating box overlays covering map tiles.
  * 
  * Props:
- * - buildings: Array of building objects with footprint: [[lng, lat], ...]
- * - selectedParcelId: String parcelId of the currently active building parcel
- * - onSelectBuilding: Callback function (parcelId) => void triggered when user clicks a parcel polygon
- * 
- * Note on Coordinates:
- * Data contract defines footprint as [longitude, latitude].
- * Leaflet Polygon requires [latitude, longitude].
- * We map [lng, lat] => [lat, lng] inside this component.
+ * - buildings: Array of building objects with footprint [[lng, lat], ...]
+ * - selectedParcelId: String parcelId of active parcel
+ * - onSelectBuilding: Callback (parcelId) => void
  */
 const MapView = ({ buildings = [], selectedParcelId, onSelectBuilding }) => {
-  // Center default coordinates around Ghaziabad / Delhi NCR region if buildings list is empty
   const defaultCenter = [28.6605, 77.4505];
   const defaultZoom = 16;
 
-  // Function to convert data footprint [[lng, lat], ...] to Leaflet format [[lat, lng], ...]
+  // Convert contract [[lng, lat]...] to Leaflet [[lat, lng]...]
   const getLeafletPositions = (footprint) => {
     if (!Array.isArray(footprint)) return [];
     return footprint.map(([lng, lat]) => [lat, lng]);
   };
 
-  // Helper to check if building has any disputed floors
   const hasDisputedFloor = (building) => {
     if (!building || !Array.isArray(building.floors)) return false;
     return building.floors.some((f) => f.status === 'disputed');
   };
 
   return (
-    <div className="relative w-full h-full min-h-[450px] bg-slate-950 rounded-xl overflow-hidden shadow-2xl border border-slate-800">
-      <MapContainer
-        center={defaultCenter}
-        zoom={defaultZoom}
-        scrollWheelZoom={true}
-        className="w-full h-full z-0"
-        style={{ height: '100%', minHeight: '450px' }}
-      >
-        {/* OpenStreetMap Tile Layer - 100% Free, No API key required */}
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
-        />
+    <div className="relative w-full h-full min-h-[500px] bg-slate-950 rounded-lg overflow-hidden border border-slate-800 flex flex-col">
+      {/* Leaflet Map Canvas */}
+      <div className="w-full flex-1 relative z-0">
+        <MapContainer
+          center={defaultCenter}
+          zoom={defaultZoom}
+          scrollWheelZoom={true}
+          className="w-full h-full"
+          style={{ height: '100%', minHeight: '450px' }}
+        >
+          {/* Free OpenStreetMap Tiles */}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
 
-        {/* Auto fit map bounds to encompass all building footprints */}
-        <MapBoundsFitter buildings={buildings} />
+          <MapBoundsFitter buildings={buildings} />
 
-        {/* Render building footprint polygons */}
-        {buildings.map((building) => {
-          const positions = getLeafletPositions(building.footprint);
-          const isSelected = selectedParcelId === building.parcelId;
-          const isDisputed = hasDisputedFloor(building);
+          {/* Footprint Polygons */}
+          {buildings.map((building) => {
+            const positions = getLeafletPositions(building.footprint);
+            const isSelected = selectedParcelId === building.parcelId;
+            const isDisputed = hasDisputedFloor(building);
 
-          // Color polygon based on status: Red if disputed, Blue/Emerald if registered
-          const strokeColor = isSelected ? '#f59e0b' : isDisputed ? '#ef4444' : '#3b82f6';
-          const fillColor = isSelected ? '#fbbf24' : isDisputed ? '#f87171' : '#60a5fa';
+            const strokeColor = isSelected ? '#f59e0b' : isDisputed ? '#dc2626' : '#2563eb';
+            const fillColor = isSelected ? '#fbbf24' : isDisputed ? '#ef4444' : '#3b82f6';
 
-          return (
-            <Polygon
-              key={building.parcelId}
-              positions={positions}
-              pathOptions={{
-                color: strokeColor,
-                fillColor: fillColor,
-                fillOpacity: isSelected ? 0.6 : 0.4,
-                weight: isSelected ? 4 : 2,
-                dashArray: isDisputed ? '4, 4' : null
-              }}
-              eventHandlers={{
-                click: () => {
-                  if (onSelectBuilding) {
-                    onSelectBuilding(building.parcelId);
+            return (
+              <Polygon
+                key={building.parcelId}
+                positions={positions}
+                pathOptions={{
+                  color: strokeColor,
+                  fillColor: fillColor,
+                  fillOpacity: isSelected ? 0.65 : 0.4,
+                  weight: isSelected ? 4 : 2,
+                  dashArray: isDisputed ? '5, 5' : null
+                }}
+                eventHandlers={{
+                  click: () => {
+                    if (onSelectBuilding) {
+                      onSelectBuilding(building.parcelId);
+                    }
                   }
-                }
-              }}
-            >
-              <Tooltip sticky direction="top" opacity={0.9} className="custom-leaflet-tooltip">
-                <div className="font-medium text-xs">
-                  <div className="font-bold text-slate-900">{building.name || building.parcelId}</div>
-                  <div className="text-slate-700">Parcel ID: {building.parcelId}</div>
-                  <div className="text-slate-600 font-semibold mt-0.5">
-                    {building.floors?.length || 0} Floors | Status:{' '}
-                    <span className={isDisputed ? 'text-red-600' : 'text-blue-600'}>
-                      {isDisputed ? 'Contains Dispute' : 'Registered'}
-                    </span>
+                }}
+              >
+                <Tooltip sticky direction="top" opacity={0.95} className="custom-leaflet-tooltip">
+                  <div className="p-1 text-xs">
+                    <div className="font-bold text-slate-900">{building.parcelId}</div>
+                    <div className="text-slate-700 font-medium">{building.name}</div>
+                    <div className="text-[11px] text-slate-600 mt-0.5">
+                      {building.floors?.length || 0} Floors |{' '}
+                      <span className={isDisputed ? 'text-red-600 font-bold' : 'text-blue-600 font-bold'}>
+                        {isDisputed ? '⚠️ Dispute Status' : '✓ Registered'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Tooltip>
+                </Tooltip>
+              </Polygon>
+            );
+          })}
+        </MapContainer>
+      </div>
 
-              <Popup>
-                <div className="p-1 max-w-[220px]">
-                  <div className="font-bold text-sm text-slate-900">{building.name || building.parcelId}</div>
-                  <div className="text-xs text-slate-600 mb-2">{building.address}</div>
-
-                  <div className="bg-slate-100 p-2 rounded text-xs space-y-1">
-                    <div><span className="font-semibold">Parcel ID:</span> {building.parcelId}</div>
-                    <div><span className="font-semibold">Floors:</span> {building.floors?.length || 0} Above-ground</div>
-                    {building.underground && (
-                      <div><span className="font-semibold">Underground:</span> {building.underground.levels} Level ({building.underground.type})</div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => onSelectBuilding && onSelectBuilding(building.parcelId)}
-                    className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1.5 px-3 rounded shadow transition-colors"
-                  >
-                    Inspect 3D Building →
-                  </button>
-                </div>
-              </Popup>
-            </Polygon>
-          );
-        })}
-      </MapContainer>
-
-      {/* Map Legend Overlay */}
-      <div className="absolute top-4 left-4 bg-slate-900/85 backdrop-blur-md px-3.5 py-2.5 rounded-lg border border-slate-700/60 shadow-xl z-[400] pointer-events-none">
-        <h4 className="text-[11px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">2D Parcel Legend</h4>
-        <div className="flex flex-col gap-1 text-xs text-slate-200">
-          <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 rounded-sm bg-blue-500/70 border border-blue-400 inline-block" />
-            <span>Standard Parcel</span>
+      {/* CLEAN BOTTOM CADASTRAL TOOLBAR (No floating overlapping boxes on map!) */}
+      <div className="bg-slate-900/95 border-t border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs z-10">
+        {/* Cadastral Legend */}
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Parcel Legend:</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-blue-500/70 border border-blue-400" />
+            <span className="text-slate-300 font-medium">Standard Parcel</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 rounded-sm bg-red-500/70 border border-red-400 border-dashed inline-block" />
-            <span>Parcel with Dispute</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-red-500/70 border border-red-400 border-dashed" />
+            <span className="text-slate-300 font-medium">Disputed Parcel</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 rounded-sm bg-amber-400/80 border-2 border-amber-500 inline-block" />
-            <span>Selected Parcel</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-amber-400 border-2 border-amber-500" />
+            <span className="text-amber-300 font-semibold">Active Parcel</span>
           </div>
+        </div>
+
+        {/* Spatial Coordinate Standard Badge */}
+        <div className="text-[11px] text-slate-400 flex items-center gap-2">
+          <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-300 font-mono">EPSG:4326 (WGS 84)</span>
+          <span>Click any parcel to inspect in 3D</span>
         </div>
       </div>
     </div>

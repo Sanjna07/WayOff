@@ -6,44 +6,27 @@ import FloorDetails from './components/FloorDetails';
 import { SAMPLE_BUILDINGS } from './data/sampleBuildings';
 
 /**
- * App Main Component
- * 
- * Manages view state (2D Map, 3D Building, or Split View), selected building parcel,
- * and raycast-selected floor state.
- * 
- * Props & Data Flow Architecture:
- * - Data Contract: All data originates from `SAMPLE_BUILDINGS` (or API call in future).
- * - `MapView` receives `buildings` list and `onSelectBuilding(parcelId)`.
- * - `Building3D` receives active `building` object and `onFloorClick(floorData)`.
- * - `FloorDetails` receives selected floor payload and building summary.
+ * App Main Component (Government Cadastral Grade)
  */
 function App() {
-  // Available view modes: 'split' (2D Map + 3D Building side by side), 'map' (2D full), '3d' (3D full)
   const [viewMode, setViewMode] = useState('split');
-
-  // Currently selected building parcel ID (default to first parcel in sample dataset)
   const [selectedParcelId, setSelectedParcelId] = useState(SAMPLE_BUILDINGS[0]?.parcelId || '');
-
-  // Currently selected floor payload from Raycasting or list click
   const [selectedFloor, setSelectedFloor] = useState(null);
 
-  // Active building object resolved from selectedParcelId
   const activeBuilding = SAMPLE_BUILDINGS.find((b) => b.parcelId === selectedParcelId) || SAMPLE_BUILDINGS[0];
 
-  // Callback when user selects a building parcel from Map or dropdown
   const handleSelectBuilding = (parcelId) => {
     setSelectedParcelId(parcelId);
-    setSelectedFloor(null); // Reset floor selection on building switch
+    setSelectedFloor(null);
   };
 
-  // Callback when user clicks a floor in the 3D scene (Raycasting event)
   const handleFloorClick = (floorData) => {
     setSelectedFloor(floorData);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
-      {/* Navigation Header */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      {/* Official Header */}
       <Header
         viewMode={viewMode}
         setViewMode={setViewMode}
@@ -52,19 +35,19 @@ function App() {
         onSelectBuilding={handleSelectBuilding}
       />
 
-      {/* Main View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Visualizers Area (Map and/or 3D Scene) */}
-        <div className={`space-y-6 ${viewMode === 'split' ? 'lg:col-span-8' : 'lg:col-span-8'}`}>
-          {/* VIEW MODE: SPLIT VIEW (Side-by-Side 2D Map & 3D Building) */}
+      {/* Main Workspace Layout */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Spatial Visualizer Viewports Area */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* VIEW MODE: SPLIT VIEW (50/50 2D Map & 3D Building) */}
           {viewMode === 'split' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                  <span>🗺️ 2D OpenStreetMap Parcel View</span>
-                  <span className="text-[10px] text-slate-500 font-mono">Leaflet Tiles</span>
+                <div className="flex items-center justify-between text-xs font-mono font-semibold text-slate-400 px-1">
+                  <span>🗺️ 2D CADASTRAL PARCEL MAP</span>
+                  <span className="text-[10px] text-slate-500">Leaflet GIS Engine</span>
                 </div>
-                <div className="h-[480px]">
+                <div className="h-[520px]">
                   <MapView
                     buildings={SAMPLE_BUILDINGS}
                     selectedParcelId={selectedParcelId}
@@ -74,11 +57,11 @@ function App() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                  <span>🏢 3D Stacked Floor Scene</span>
-                  <span className="text-[10px] text-slate-500 font-mono">Three.js WebGL</span>
+                <div className="flex items-center justify-between text-xs font-mono font-semibold text-slate-400 px-1">
+                  <span>🏢 3D VERTICAL FLOOR ELEVATION</span>
+                  <span className="text-[10px] text-slate-500">Three.js WebGL Engine</span>
                 </div>
-                <div className="h-[480px]">
+                <div className="h-[520px]">
                   <Building3D
                     building={activeBuilding}
                     onFloorClick={handleFloorClick}
@@ -89,20 +72,17 @@ function App() {
             </div>
           )}
 
-          {/* VIEW MODE: 2D MAP FULL VIEW */}
+          {/* VIEW MODE: 2D CADASTRAL MAP FULL VIEW */}
           {viewMode === 'map' && (
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                <span>🗺️ 2D OpenStreetMap Parcel View (Full View)</span>
+              <div className="flex items-center justify-between text-xs font-mono font-semibold text-slate-400 px-1">
+                <span>🗺️ 2D CADASTRAL PARCEL MAP (FULL VIEWPORT)</span>
               </div>
-              <div className="h-[620px]">
+              <div className="h-[640px]">
                 <MapView
                   buildings={SAMPLE_BUILDINGS}
                   selectedParcelId={selectedParcelId}
-                  onSelectBuilding={(parcelId) => {
-                    handleSelectBuilding(parcelId);
-                    // Switch to 3D view after clicking building parcel if desired
-                  }}
+                  onSelectBuilding={handleSelectBuilding}
                 />
               </div>
             </div>
@@ -111,10 +91,10 @@ function App() {
           {/* VIEW MODE: 3D BUILDING FULL VIEW */}
           {viewMode === '3d' && (
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                <span>🏢 3D Stacked Floor Scene (Full Interactive View)</span>
+              <div className="flex items-center justify-between text-xs font-mono font-semibold text-slate-400 px-1">
+                <span>🏢 3D VERTICAL FLOOR ELEVATION (FULL VIEWPORT)</span>
               </div>
-              <div className="h-[620px]">
+              <div className="h-[640px]">
                 <Building3D
                   building={activeBuilding}
                   onFloorClick={handleFloorClick}
@@ -125,8 +105,8 @@ function App() {
           )}
         </div>
 
-        {/* Sidebar Inspector Panel */}
-        <div className="lg:col-span-4 sticky top-24">
+        {/* Cadastral Inspector Sidebar */}
+        <div className="lg:col-span-4 sticky top-20">
           <FloorDetails
             selectedBuilding={activeBuilding}
             selectedFloor={selectedFloor}
@@ -136,9 +116,9 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-900 bg-slate-950 py-3 px-6 text-center text-xs text-slate-500 font-mono">
         <p>
-          GeoBuilding 3D Stack &copy; 2026. Built with Vite, React, Three.js, and Leaflet (OpenStreetMap). No API keys required.
+          Government of India Land Revenue Cadastral Portal &bull; ULPIN Integrated 3D Framework &bull; Open Source Engine (No Mapbox / API Keys)
         </p>
       </footer>
     </div>
