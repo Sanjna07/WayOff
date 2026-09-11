@@ -1,14 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 /**
  * Building3D Component
  *
- * Renders an architectural apartment-block model on a light survey backdrop:
- * concrete facade, window bays, balconies, entrance canopy, roof plant and
- * landscaped ground. Each floor remains an individually selectable volume -
- * the raycasting, userData contract, callbacks and orbit controls are
+ * Renders an architectural apartment-block model on a light survey backdrop.
+ * Scene construction runs once per building; floor selection and hover are
+ * material-only updates, so there is no rebuild flash when clicking floors.
+ * The raycasting targets, userData contract and onFloorClick payloads are
  * unchanged from the original implementation.
  *
  * Props:
@@ -24,21 +24,67 @@ const STATUS_COLORS = {
   vacant: { wall: '#b6b0a3', edge: '#847e6f' },
   selected: { wall: '#c9a24a', edge: '#8a6d2f' }
 };
+const UNDERGROUND_COLORS = { wall: '#7d8590', edge: '#5f6874' };
 
 const CONCRETE = '#d9d3c7';
 const SLAB = '#c3bdaf';
 const GLASS = '#33415c';
 const RAILING = '#7c8894';
 
+/**
+ * Small serif level plate (F1, F2..., UG) rendered to a canvas sprite.
+ */
+const makeLabelSprite = (text) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f7f6f3';
+  ctx.fillRect(0, 0, 128, 64);
+  ctx.strokeStyle = '#b9b3a6';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, 124, 60);
+  ctx.fillStyle = '#1b2a4a';
+  ctx.font = 'bold 34px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 64, 34);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(1.5, 0.75, 1);
+  return sprite;
+};
+
 const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
   const mountRef = useRef(null);
-  const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const meshesRef = useRef([]);
+  const meshMetaRef = useRef([]);
+  const hoveredRef = useRef(null);
+  const selectedUlpinRef = useRef(selectedFloorUlpin);
+  const onFloorClickRef = useRef(onFloorClick);
+  const applySelectionRef = useRef(null);
+  const [ready, setReady] = useState(false);
 
+  // Keep the latest callback without triggering a scene rebuild
+  useEffect(() => {
+    onFloorClickRef.current = onFloorClick;
+  }, [onFloorClick]);
+
+  // Selection is a material-only update - no scene rebuild, no flash
+  useEffect(() => {
+    selectedUlpinRef.current = selectedFloorUlpin;
+    if (applySelectionRef.current) applySelectionRef.current(selectedFloorUlpin);
+  }, [selectedFloorUlpin]);
+
+  // Scene construction: runs only when the building changes
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
+
+    setReady(false);
 
     const width = container.clientWidth || 600;
     const height = container.clientHeight || 500;
@@ -49,7 +95,6 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#e9edf2');
     scene.fog = new THREE.FogExp2('#e9edf2', 0.0085);
-    sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
     camera.position.set(24, 15, 28);
@@ -118,6 +163,7 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
     // 6. BUILDING ARCHITECTURAL STACKING
     // -------------------------------------------------------------------------
     const interactiveMeshes = [];
+    const meshMeta = [];
     const boxWidth = 10.0;
     const boxDepth = 8.0;
 
@@ -159,15 +205,12 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
 
         // Underground structure box
         const ugGeo = new THREE.BoxGeometry(boxWidth * 0.96, ugHeight * 0.96, boxDepth * 0.96);
-        const isSelected = selectedFloorUlpin === ug.ulpin;
         const ugMat = new THREE.MeshStandardMaterial({
-          color: isSelected ? STATUS_COLORS.selected.wall : '#7d8590',
+          color: UNDERGROUND_COLORS.wall,
           roughness: 0.7,
           metalness: 0.2,
           transparent: true,
-          opacity: 0.9,
-          emissive: isSelected ? '#8a6d2f' : '#000000',
-          emissiveIntensity: isSelected ? 0.25 : 0
+          opacity: 0.9
         });
 
         const ugMesh = new THREE.Mesh(ugGeo, ugMat);
@@ -181,15 +224,18 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
         };
 
         const wireGeo = new THREE.WireframeGeometry(ugGeo);
-        const wireMat = new THREE.LineBasicMaterial({
-          color: isSelected ? STATUS_COLORS.selected.edge : '#5f6874',
-          linewidth: 1.5
-        });
+        const wireMat = new THREE.LineBasicMaterial({ color: UNDERGROUND_COLORS.edge, linewidth: 1.5 });
         const wireframe = new THREE.LineSegments(wireGeo, wireMat);
         ugMesh.add(wireframe);
 
+        // Level plate
+        const ugLabel = makeLabelSprite('UG');
+        ugLabel.position.set(-(boxWidth / 2 + 1.2), 0, 0);
+        ugMesh.add(ugLabel);
+
         scene.add(ugMesh);
         interactiveMeshes.push(ugMesh);
+        meshMeta.push({ mesh: ugMesh, statusKey: null, edgeMat: wireMat, isUnderground: true });
       }
 
       // --- B. ABOVE-GROUND FLOORS (Stacked Bottom-to-Top along Positive Y Axis) ---
@@ -198,18 +244,13 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
 
         building.floors.forEach((floor, floorIndex) => {
           const floorHeight = floor.height || 3.2;
-          const isSelected = selectedFloorUlpin === floor.ulpin;
           const statusKey = String(floor.status || 'registered').toLowerCase();
-          const palette = isSelected
-            ? STATUS_COLORS.selected
-            : STATUS_COLORS[statusKey] || STATUS_COLORS.registered;
+          const palette = STATUS_COLORS[statusKey] || STATUS_COLORS.registered;
 
           const wallMat = new THREE.MeshStandardMaterial({
             color: palette.wall,
             roughness: 0.75,
-            metalness: 0.05,
-            emissive: isSelected ? '#8a6d2f' : '#000000',
-            emissiveIntensity: isSelected ? 0.22 : 0
+            metalness: 0.05
           });
 
           // Interactive floor volume
@@ -250,7 +291,6 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
               win.position.set(x, winYOffset, zSign * (boxDepth / 2 + 0.035));
               floorMesh.add(win);
 
-              // Thin concrete window surround
               const lintelGeo = new THREE.BoxGeometry(1.7, 0.1, 0.09);
               const lintel = new THREE.Mesh(lintelGeo, concreteMat);
               lintel.position.set(x, winYOffset + winH / 2 + 0.07, zSign * (boxDepth / 2 + 0.035));
@@ -312,8 +352,14 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
           const edgeLines = new THREE.LineSegments(edgesGeo, edgesMat);
           floorMesh.add(edgeLines);
 
+          // --- Level plate ---
+          const label = makeLabelSprite(`F${floor.floorNumber}`);
+          label.position.set(-(boxWidth / 2 + 1.2), 0, 0);
+          floorMesh.add(label);
+
           scene.add(floorMesh);
           interactiveMeshes.push(floorMesh);
+          meshMeta.push({ mesh: floorMesh, statusKey, edgeMat: edgesMat, isUnderground: false });
 
           currentY += floorHeight;
         });
@@ -338,7 +384,7 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
         const tankMat = new THREE.MeshStandardMaterial({ color: '#e8e4da', roughness: 0.6, metalness: 0.1 });
         const tank = new THREE.Mesh(tankGeo, tankMat);
         tank.position.set(-boxWidth / 4, roofY + 0.65, -boxDepth / 4);
-        tank.castShadow = true;
+    tank.castShadow = true;
         scene.add(tank);
 
         const machineRoomGeo = new THREE.BoxGeometry(2.6, 1.25, 1.9);
@@ -392,9 +438,48 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
     }
 
     meshesRef.current = interactiveMeshes;
+    meshMetaRef.current = meshMeta;
 
     // -------------------------------------------------------------------------
-    // 7. RAYCASTING & INTERACTION (unchanged)
+    // 7. SELECTION & HOVER (material-only, no rebuild)
+    // -------------------------------------------------------------------------
+    const applySelection = (ulpin) => {
+      hoveredRef.current = null;
+      meshMetaRef.current.forEach(({ mesh, statusKey, edgeMat, isUnderground }) => {
+        const isSelected = Boolean(ulpin) && mesh.userData.ulpin === ulpin;
+        const palette = isSelected
+          ? STATUS_COLORS.selected
+          : isUnderground
+            ? UNDERGROUND_COLORS
+            : STATUS_COLORS[statusKey] || STATUS_COLORS.registered;
+
+        mesh.material.color.set(palette.wall);
+        mesh.material.emissive.set(isSelected ? '#8a6d2f' : '#000000');
+        mesh.material.emissiveIntensity = isSelected ? 0.22 : 0;
+        if (edgeMat) edgeMat.color.set(palette.edge);
+      });
+    };
+    applySelectionRef.current = applySelection;
+    applySelection(selectedUlpinRef.current);
+
+    const setHover = (mesh) => {
+      if (hoveredRef.current === mesh) return;
+
+      const prev = hoveredRef.current;
+      if (prev && prev.userData.ulpin !== selectedUlpinRef.current) {
+        prev.material.emissive.set('#000000');
+        prev.material.emissiveIntensity = 0;
+      }
+
+      hoveredRef.current = mesh;
+      if (mesh && mesh.userData.ulpin !== selectedUlpinRef.current) {
+        mesh.material.emissive.set('#ffffff');
+        mesh.material.emissiveIntensity = 0.1;
+      }
+    };
+
+    // -------------------------------------------------------------------------
+    // 8. RAYCASTING & INTERACTION
     // -------------------------------------------------------------------------
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -409,8 +494,8 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
 
       if (intersects.length > 0) {
         const clickedMesh = intersects[0].object;
-        if (clickedMesh && clickedMesh.userData && onFloorClick) {
-          onFloorClick(clickedMesh.userData);
+        if (clickedMesh && clickedMesh.userData && onFloorClickRef.current) {
+          onFloorClickRef.current(clickedMesh.userData);
         }
       }
     };
@@ -425,8 +510,10 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
 
       if (intersects.length > 0) {
         renderer.domElement.style.cursor = 'pointer';
+        setHover(intersects[0].object);
       } else {
         renderer.domElement.style.cursor = 'default';
+        setHover(null);
       }
     };
 
@@ -435,18 +522,23 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
     domElement.addEventListener('pointermove', handlePointerMove);
 
     // -------------------------------------------------------------------------
-    // 8. ANIMATION LOOP
+    // 9. ANIMATION LOOP
     // -------------------------------------------------------------------------
     let animationFrameId;
+    let firstFrame = true;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
+      if (firstFrame) {
+        firstFrame = false;
+        setReady(true);
+      }
     };
     animate();
 
     // -------------------------------------------------------------------------
-    // 9. RESIZE OBSERVER
+    // 10. RESIZE OBSERVER
     // -------------------------------------------------------------------------
     const handleResize = () => {
       if (!container) return;
@@ -461,7 +553,7 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
     resizeObserver.observe(container);
 
     // -------------------------------------------------------------------------
-    // 10. CLEANUP
+    // 11. CLEANUP
     // -------------------------------------------------------------------------
     return () => {
       cancelAnimationFrame(animationFrameId);
@@ -469,11 +561,19 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
       domElement.removeEventListener('pointermove', handlePointerMove);
       resizeObserver.disconnect();
 
+      applySelectionRef.current = null;
+      hoveredRef.current = null;
+      meshMetaRef.current = [];
+      meshesRef.current = [];
+
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-          else obj.material.dispose();
+          const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+          materials.forEach((m) => {
+            if (m.map) m.map.dispose();
+            m.dispose();
+          });
         }
       });
 
@@ -483,12 +583,19 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
         domElement.parentNode.removeChild(domElement);
       }
     };
-  }, [building, selectedFloorUlpin, onFloorClick]);
+  }, [building]);
 
   return (
     <div className="relative w-full h-full min-h-[500px] bg-sheet border border-rule overflow-hidden flex flex-col">
       {/* Three.js Canvas Container */}
-      <div ref={mountRef} className="w-full flex-1 relative" />
+      <div className="w-full flex-1 relative">
+        <div ref={mountRef} className="absolute inset-0" />
+        {!ready && (
+          <div className="absolute inset-0 flex items-center justify-center bg-paper text-xs text-ink-muted">
+            Preparing 3D view&hellip;
+          </div>
+        )}
+      </div>
 
       {/* Quiet bottom toolbar */}
       <div className="bg-paper border-t border-rule px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-xs text-ink-muted z-10">
