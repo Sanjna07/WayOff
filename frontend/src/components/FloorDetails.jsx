@@ -1,193 +1,166 @@
 import React from 'react';
-import { Layers, ShieldCheck, ShieldAlert, Building2, User, Key, Ruler, ArrowDown, FileText } from 'lucide-react';
+import { Building2 } from 'lucide-react';
+import { getStatusMeta } from '../constants/statusTheme';
 
 /**
- * FloorDetails Component (Government Inspector Card Grade)
- * 
- * Cadastral Land Parcel & Vertical Stack Inspector
+ * Flat status indicator: small solid dot and plain text. No pills, no glow.
+ */
+const StatusIndicator = ({ status }) => {
+  const meta = getStatusMeta(status);
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs whitespace-nowrap ${meta.text}`}>
+      <span className={`w-2 h-2 rounded-full ${meta.dot}`} aria-hidden="true" />
+      {meta.label}
+    </span>
+  );
+};
+
+/**
+ * Definition-list row for the record: quiet label left, value right.
+ */
+const Field = ({ label, value }) => (
+  <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-rule last:border-b-0">
+    <dt className="text-xs text-ink-muted">{label}</dt>
+    <dd className="text-sm text-ink text-right tabular-nums">{value}</dd>
+  </div>
+);
+
+/**
+ * FloorDetails Component
+ *
+ * Cadastral record of title: parcel header, selected level details and the
+ * schedule of floors. This panel is the data of record and carries the most
+ * visual weight in the layout.
  */
 const FloorDetails = ({ selectedFloor, selectedBuilding, onFloorSelect }) => {
   if (!selectedBuilding) {
     return (
-      <div className="bg-slate-900 rounded-lg p-6 border border-slate-800 text-slate-400 text-center flex flex-col items-center justify-center min-h-[350px]">
-        <Building2 className="w-10 h-10 text-slate-600 mb-2" />
-        <h3 className="text-sm font-bold text-slate-300">No Parcel Selected</h3>
-        <p className="text-xs text-slate-500 mt-1">Select a parcel from the map or dropdown.</p>
+      <div className="bg-sheet border border-rule border-t-2 border-t-navy p-6 text-center min-h-[300px] flex flex-col items-center justify-center">
+        <Building2 className="w-8 h-8 text-ink-faint mb-2" aria-hidden="true" />
+        <h3 className="font-heading text-sm text-navy">No parcel selected</h3>
+        <p className="text-xs text-ink-muted mt-1">Select a parcel from the map or the parcel list.</p>
       </div>
     );
   }
 
-  const getStatusBadge = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'disputed':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-red-950 text-red-400 border border-red-800 uppercase tracking-wider">
-            <ShieldAlert className="w-3 h-3 text-red-400" /> Disputed Title
-          </span>
-        );
-      case 'vacant':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wider">
-            <Building2 className="w-3 h-3 text-slate-400" /> Unallocated
-          </span>
-        );
-      case 'registered':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-blue-950 text-blue-400 border border-blue-800 uppercase tracking-wider">
-            <ShieldCheck className="w-3 h-3 text-blue-400" /> Registered
-          </span>
-        );
-    }
-  };
+  const isUnderground = selectedFloor?.type === 'underground';
+  const undergroundSelected =
+    selectedFloor && selectedBuilding.underground && selectedFloor.ulpin === selectedBuilding.underground.ulpin;
 
   return (
-    <div className="bg-slate-900 rounded-lg p-4 border border-slate-800 text-slate-100 flex flex-col gap-4 shadow-lg">
-      {/* Official Cadastral Header */}
-      <div className="border-b border-slate-800 pb-3">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400 bg-blue-950 px-2 py-0.5 rounded border border-blue-800">
-            Cadastral Record
-          </span>
-          <span className="text-xs font-mono font-bold text-slate-400">{selectedBuilding.parcelId}</span>
+    <section className="bg-sheet border border-rule border-t-2 border-t-navy" aria-label="Cadastral record">
+      {/* Record header */}
+      <div className="px-4 pt-4 pb-3 border-b border-rule">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xs text-ink-muted">Record of title</span>
+          <span className="text-xs text-ink tabular-nums">{selectedBuilding.parcelId}</span>
         </div>
-        <h2 className="text-base font-bold text-slate-100">{selectedBuilding.name || selectedBuilding.parcelId}</h2>
-        <p className="text-xs text-slate-400 mt-0.5">{selectedBuilding.address}</p>
+        <h2 className="font-heading text-lg text-navy mt-0.5">
+          {selectedBuilding.name || selectedBuilding.parcelId}
+        </h2>
+        <p className="text-xs text-ink-muted mt-0.5">{selectedBuilding.address}</p>
       </div>
 
-      {/* Selected Floor Inspector Details */}
-      {selectedFloor ? (
-        <div className="bg-slate-950 rounded p-3.5 border border-amber-500/40 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <div className="flex items-center gap-2">
-              {selectedFloor.type === 'underground' ? (
-                <ArrowDown className="w-4 h-4 text-purple-400" />
-              ) : (
-                <Layers className="w-4 h-4 text-amber-400" />
-              )}
-              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-200">
-                {selectedFloor.type === 'underground'
-                  ? `Subterranean Level (${selectedFloor.levels || 1} Level)`
-                  : `Floor Level #${selectedFloor.floorNumber}`}
+      {/* Selected level details */}
+      <div className="px-4 py-3 border-b border-rule">
+        {selectedFloor ? (
+          <>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <h3 className="text-sm font-semibold text-ink">
+                {isUnderground
+                  ? `Subterranean level (${selectedFloor.levels || 1} ${(selectedFloor.levels || 1) > 1 ? 'levels' : 'level'})`
+                  : `Floor ${selectedFloor.floorNumber}`}
               </h3>
+              {!isUnderground && <StatusIndicator status={selectedFloor.status} />}
             </div>
-            {selectedFloor.type !== 'underground' && getStatusBadge(selectedFloor.status)}
-          </div>
+            <dl>
+              <Field label="ULPIN reference" value={selectedFloor.ulpin} />
+              {isUnderground ? (
+                <Field label="Sub-structure type" value={selectedFloor.undergroundType} />
+              ) : (
+                <Field label="Registered owner" value={selectedFloor.owner} />
+              )}
+              {selectedFloor.height && <Field label="Ceiling height" value={`${selectedFloor.height} m`} />}
+            </dl>
+          </>
+        ) : (
+          <p className="text-xs text-ink-muted">
+            Select a floor in the 3D view or from the schedule below to inspect ownership and ULPIN registry data.
+          </p>
+        )}
+      </div>
 
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
-            <div className="bg-slate-900 p-2 rounded border border-slate-800">
-              <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider flex items-center gap-1 mb-1">
-                <Key className="w-3 h-3 text-slate-400" /> ULPIN Reference
-              </div>
-              <div className="font-mono text-slate-100 font-bold">{selectedFloor.ulpin}</div>
-            </div>
+      {/* Schedule of floors */}
+      <div className="px-4 py-3">
+        <h3 className="text-xs text-ink-muted mb-2">
+          Schedule of floors &middot; {selectedBuilding.floors?.length || 0} levels
+        </h3>
+        <div className="max-h-[300px] overflow-y-auto">
+          <ul className="divide-y divide-rule border-t border-b border-rule">
+            {Array.isArray(selectedBuilding.floors) &&
+              [...selectedBuilding.floors].reverse().map((floor) => {
+                const isSelected = selectedFloor && selectedFloor.ulpin === floor.ulpin;
+                const meta = getStatusMeta(floor.status);
+                return (
+                  <li key={floor.ulpin}>
+                    <button
+                      onClick={() =>
+                        onFloorSelect({
+                          type: 'floor',
+                          ...floor,
+                          parcelId: selectedBuilding.parcelId
+                        })
+                      }
+                      aria-pressed={isSelected}
+                      className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left text-xs border-l-2 ${meta.edge} ${
+                        isSelected ? 'bg-gold-tint' : 'bg-sheet hover:bg-paper'
+                      } focus-visible:outline focus-visible:outline-navy`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-ink font-medium truncate">
+                          Floor {floor.floorNumber} &middot; {floor.owner}
+                        </div>
+                        <div className="text-[11px] text-ink-muted tabular-nums">{floor.ulpin}</div>
+                      </div>
+                      <StatusIndicator status={floor.status} />
+                    </button>
+                  </li>
+                );
+              })}
 
-            {selectedFloor.type === 'underground' ? (
-              <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider flex items-center gap-1 mb-1">
-                  <Building2 className="w-3 h-3 text-slate-400" /> Sub-Structure Type
-                </div>
-                <div className="text-slate-100 font-semibold">{selectedFloor.undergroundType}</div>
-              </div>
-            ) : (
-              <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider flex items-center gap-1 mb-1">
-                  <User className="w-3 h-3 text-slate-400" /> Registered Owner
-                </div>
-                <div className="text-slate-100 font-semibold">{selectedFloor.owner}</div>
-              </div>
-            )}
-
-            {selectedFloor.height && (
-              <div className="bg-slate-900 p-2 rounded border border-slate-800 col-span-2 flex items-center justify-between">
-                <div className="text-slate-400 text-xs flex items-center gap-1 font-medium">
-                  <Ruler className="w-3.5 h-3.5 text-blue-400" /> Floor Ceiling Height
-                </div>
-                <div className="font-mono font-bold text-slate-200">{selectedFloor.height} Meters</div>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-slate-950/60 rounded p-3 border border-slate-800 text-xs text-slate-400 flex items-center gap-2">
-          <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
-          <span>Click any 3D floor box or stack item below to inspect title ownership and ULPIN registry data.</span>
-        </div>
-      )}
-
-      {/* Vertical Floor Stack List */}
-      <div>
-        <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold mb-2 flex items-center justify-between">
-          <span>Vertical Cadastral Stack ({selectedBuilding.floors?.length || 0} Levels)</span>
-        </div>
-        <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
-          {Array.isArray(selectedBuilding.floors) &&
-            [...selectedBuilding.floors].reverse().map((floor) => {
-              const isSelected = selectedFloor && selectedFloor.ulpin === floor.ulpin;
-              return (
+            {selectedBuilding.underground && (
+              <li>
                 <button
-                  key={floor.ulpin}
                   onClick={() =>
                     onFloorSelect({
-                      type: 'floor',
-                      ...floor,
+                      type: 'underground',
+                      ulpin: selectedBuilding.underground.ulpin,
+                      levels: selectedBuilding.underground.levels,
+                      undergroundType: selectedBuilding.underground.type,
                       parcelId: selectedBuilding.parcelId
                     })
                   }
-                  className={`w-full flex items-center justify-between p-2.5 rounded border text-xs transition-all text-left ${
-                    isSelected
-                      ? 'bg-amber-500/10 border-amber-500 text-amber-200 font-semibold'
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'
-                  }`}
+                  aria-pressed={Boolean(undergroundSelected)}
+                  className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left text-xs border-l-2 border-l-ink-faint ${
+                    undergroundSelected ? 'bg-gold-tint' : 'bg-sheet hover:bg-paper'
+                  } focus-visible:outline focus-visible:outline-navy`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-[10px] text-slate-300">
-                      L{floor.floorNumber}
-                    </span>
-                    <div>
-                      <div className="font-semibold text-slate-200">{floor.owner}</div>
-                      <div className="text-[10px] font-mono text-slate-400">{floor.ulpin}</div>
+                  <div className="min-w-0">
+                    <div className="text-ink font-medium">Subterranean level</div>
+                    <div className="text-[11px] text-ink-muted tabular-nums">
+                      {selectedBuilding.underground.ulpin}
                     </div>
                   </div>
-                  {getStatusBadge(floor.status)}
+                  <span className="text-[11px] text-ink-muted text-right max-w-[45%]">
+                    {selectedBuilding.underground.type}
+                  </span>
                 </button>
-              );
-            })}
-
-          {selectedBuilding.underground && (
-            <button
-              onClick={() =>
-                onFloorSelect({
-                  type: 'underground',
-                  ulpin: selectedBuilding.underground.ulpin,
-                  levels: selectedBuilding.underground.levels,
-                  undergroundType: selectedBuilding.underground.type,
-                  parcelId: selectedBuilding.parcelId
-                })
-              }
-              className={`w-full flex items-center justify-between p-2.5 rounded border text-xs transition-all text-left ${
-                selectedFloor && selectedFloor.ulpin === selectedBuilding.underground.ulpin
-                  ? 'bg-purple-500/20 border-purple-500 text-purple-200 font-semibold'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-[10px] text-purple-400">
-                  UG
-                </span>
-                <div>
-                  <div className="font-semibold text-slate-300">Subterranean Level</div>
-                  <div className="text-[10px] font-mono text-slate-400">{selectedBuilding.underground.ulpin}</div>
-                </div>
-              </div>
-              <span className="text-[10px] bg-slate-900 text-purple-300 px-2 py-0.5 rounded border border-slate-800">
-                {selectedBuilding.underground.type}
-              </span>
-            </button>
-          )}
+              </li>
+            )}
+          </ul>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

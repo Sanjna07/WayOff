@@ -358,42 +358,38 @@ const Building3D = ({ building, onFloorClick, selectedFloorUlpin }) => {
   }, [building, selectedFloorUlpin, onFloorClick]);
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-slate-950 rounded-lg overflow-hidden border border-slate-800 flex flex-col">
-      {/* Three.js Canvas Container (Takes full main area) */}
+    <div className="relative w-full h-full min-h-[500px] bg-sheet border border-rule overflow-hidden flex flex-col">
+      {/* Three.js Canvas Container (render untouched) */}
       <div ref={mountRef} className="w-full flex-1 relative" />
 
-      {/* CLEAN BOTTOM TOOLBAR (No overlapping boxes over the 3D model!) */}
-      <div className="bg-slate-900/95 border-t border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs z-10">
-        {/* Status Legend */}
-        <div className="flex items-center gap-4">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Floor Status:</span>
+      {/* Quiet bottom toolbar */}
+      <div className="bg-paper border-t border-rule px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-xs text-ink-muted z-10">
+        {/* Status legend - colors match the render palette */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="text-ink">Floor status</span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
-            <span className="text-slate-300 font-medium">Registered</span>
+            <span className="w-2 h-2 rounded-full bg-[#2563eb]" aria-hidden="true" />
+            <span>Registered</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
-            <span className="text-slate-300 font-medium">Disputed</span>
+            <span className="w-2 h-2 rounded-full bg-[#dc2626]" aria-hidden="true" />
+            <span>Disputed</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shadow-sm shadow-slate-400/50" />
-            <span className="text-slate-300 font-medium">Vacant</span>
+            <span className="w-2 h-2 rounded-full bg-[#64748b]" aria-hidden="true" />
+            <span>Vacant</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50" />
-            <span className="text-amber-300 font-semibold">Selected</span>
+            <span className="w-2 h-2 rounded-full bg-[#f59e0b]" aria-hidden="true" />
+            <span>Selected</span>
           </div>
-          <div className="flex items-center gap-1.5 border-l border-slate-800 pl-3">
-            <span className="w-2.5 h-2.5 rounded bg-slate-700 border border-slate-500" />
-            <span className="text-slate-400">Underground</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-[#334155]" aria-hidden="true" />
+            <span>Underground</span>
           </div>
         </div>
 
-        {/* Orbit Control Tip */}
-        <div className="text-[11px] text-slate-400 flex items-center gap-2">
-          <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-300 font-mono">3D CAD Navigation</span>
-          <span>Left-click: Rotate | Right-click: Pan | Scroll: Zoom</span>
-        </div>
+        <span>Drag to rotate &middot; right-drag to pan &middot; scroll to zoom</span>
       </div>
     </div>
   );
