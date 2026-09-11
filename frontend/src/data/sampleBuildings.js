@@ -26,6 +26,10 @@ export const SAMPLE_BUILDINGS = [
     parcelId: "UP-GZB-0001",
     name: "Raj Nagar Heights (Parcel UP-GZB-0001)",
     address: "Plot 14, Sector 10, Raj Nagar, Ghaziabad",
+    district: "Ghaziabad, Uttar Pradesh",
+    tehsil: "Ghaziabad Sadar",
+    surveyDate: "2024-11-18",
+    registrarOffice: "Sub-Registrar Office, Ghaziabad I",
     footprint: [
       [77.4500, 28.6600],
       [77.4510, 28.6600],
@@ -79,6 +83,10 @@ export const SAMPLE_BUILDINGS = [
     parcelId: "UP-NOI-0002",
     name: "Cyber Park Tower B (Parcel UP-NOI-0002)",
     address: "Block B, Tech Zone 4, Noida",
+    district: "Gautam Buddha Nagar, Uttar Pradesh",
+    tehsil: "Dadri",
+    surveyDate: "2025-02-03",
+    registrarOffice: "Sub-Registrar Office, Noida II",
     footprint: [
       [77.4520, 28.6620],
       [77.4535, 28.6620],
@@ -125,6 +133,10 @@ export const SAMPLE_BUILDINGS = [
     parcelId: "DL-NDLS-0003",
     name: "Connaught View Complex (Parcel DL-NDLS-0003)",
     address: "Inner Circle, Connaught Place, New Delhi",
+    district: "New Delhi",
+    tehsil: "Connaught Place",
+    surveyDate: "2024-08-27",
+    registrarOffice: "Sub-Registrar Office, New Delhi IV",
     footprint: [
       [77.4480, 28.6580],
       [77.4495, 28.6580],

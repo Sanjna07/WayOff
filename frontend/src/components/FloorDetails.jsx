@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2, Printer } from 'lucide-react';
 import { getStatusMeta } from '../constants/statusTheme';
 
 /**
@@ -28,9 +28,9 @@ const Field = ({ label, value }) => (
 /**
  * FloorDetails Component
  *
- * Cadastral record of title: parcel header, selected level details and the
- * schedule of floors. This panel is the data of record and carries the most
- * visual weight in the layout.
+ * Cadastral record of title: parcel header with registry metadata, selected
+ * level details and the schedule of floors. Printable as a standalone record
+ * extract via the print stylesheet (.print-area).
  */
 const FloorDetails = ({ selectedFloor, selectedBuilding, onFloorSelect }) => {
   if (!selectedBuilding) {
@@ -46,19 +46,45 @@ const FloorDetails = ({ selectedFloor, selectedBuilding, onFloorSelect }) => {
   const isUnderground = selectedFloor?.type === 'underground';
   const undergroundSelected =
     selectedFloor && selectedBuilding.underground && selectedFloor.ulpin === selectedBuilding.underground.ulpin;
+  const hasMetadata =
+    selectedBuilding.district || selectedBuilding.tehsil || selectedBuilding.surveyDate || selectedBuilding.registrarOffice;
 
   return (
-    <section className="bg-sheet border border-rule border-t-2 border-t-navy" aria-label="Cadastral record">
+    <section className="print-area bg-sheet border border-rule border-t-2 border-t-navy" aria-label="Cadastral record">
       {/* Record header */}
       <div className="px-4 pt-4 pb-3 border-b border-rule">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-xs text-ink-muted">Record of title</span>
-          <span className="text-xs text-ink tabular-nums">{selectedBuilding.parcelId}</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-ink-muted">
+            Record of title <span className="text-ink-faint">&middot; स्वामित्व अभिलेख</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-ink tabular-nums">{selectedBuilding.parcelId}</span>
+            <button
+              onClick={() => window.print()}
+              className="no-print flex items-center gap-1 text-xs text-navy border border-rule-strong px-2 py-0.5 hover:bg-navy-tint focus-visible:outline focus-visible:outline-navy"
+              title="Print this record extract"
+            >
+              <Printer className="w-3.5 h-3.5" aria-hidden="true" />
+              Print
+            </button>
+          </div>
         </div>
         <h2 className="font-heading text-lg text-navy mt-0.5">
           {selectedBuilding.name || selectedBuilding.parcelId}
         </h2>
         <p className="text-xs text-ink-muted mt-0.5">{selectedBuilding.address}</p>
+
+        {/* Registry metadata */}
+        {hasMetadata && (
+          <dl className="mt-2 border-t border-rule pt-1">
+            {selectedBuilding.district && <Field label="District" value={selectedBuilding.district} />}
+            {selectedBuilding.tehsil && <Field label="Tehsil" value={selectedBuilding.tehsil} />}
+            {selectedBuilding.surveyDate && <Field label="Last survey" value={selectedBuilding.surveyDate} />}
+            {selectedBuilding.registrarOffice && (
+              <Field label="Registrar office" value={selectedBuilding.registrarOffice} />
+            )}
+          </dl>
+        )}
       </div>
 
       {/* Selected level details */}
@@ -93,9 +119,10 @@ const FloorDetails = ({ selectedFloor, selectedBuilding, onFloorSelect }) => {
       {/* Schedule of floors */}
       <div className="px-4 py-3">
         <h3 className="text-xs text-ink-muted mb-2">
-          Schedule of floors &middot; {selectedBuilding.floors?.length || 0} levels
+          Schedule of floors <span className="text-ink-faint">&middot; तल अनुसूची</span> &middot;{' '}
+          {selectedBuilding.floors?.length || 0} levels
         </h3>
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className="print-expand max-h-[300px] overflow-y-auto">
           <ul className="divide-y divide-rule border-t border-b border-rule">
             {Array.isArray(selectedBuilding.floors) &&
               [...selectedBuilding.floors].reverse().map((floor) => {

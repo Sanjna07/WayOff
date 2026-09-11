@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -42,12 +42,19 @@ const MapBoundsFitter = ({ buildings }) => {
   return null;
 };
 
+// Muted institutional polygon palette, matching the 3D facade tones
+const PARCEL_COLORS = {
+  registered: { stroke: '#54688c', fill: '#8ea3c2' },
+  disputed: { stroke: '#84413a', fill: '#b3655c' },
+  selected: { stroke: '#8a6d2f', fill: '#c9a24a' }
+};
+
 /**
  * MapView Component
  *
  * Renders an interactive OpenStreetMap 2D parcel footprint map using Leaflet.
- * Map render logic is unchanged; only the surrounding chrome is styled to the
- * institutional theme.
+ * Map logic is unchanged; polygon colors follow the muted institutional
+ * palette and a quiet overlay is shown while tiles load.
  *
  * Props:
  * - buildings: Array of building objects with footprint [[lng, lat], ...]
@@ -57,6 +64,7 @@ const MapBoundsFitter = ({ buildings }) => {
 const MapView = ({ buildings = [], selectedParcelId, onSelectBuilding }) => {
   const defaultCenter = [28.6605, 77.4505];
   const defaultZoom = 16;
+  const [tilesLoading, setTilesLoading] = useState(true);
 
   // Convert contract [[lng, lat]...] to Leaflet [[lat, lng]...]
   const getLeafletPositions = (footprint) => {
@@ -85,6 +93,10 @@ const MapView = ({ buildings = [], selectedParcelId, onSelectBuilding }) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
+            eventHandlers={{
+              loading: () => setTilesLoading(true),
+              load: () => setTilesLoading(false)
+            }}
           />
 
           <MapBoundsFitter buildings={buildings} />
@@ -95,16 +107,19 @@ const MapView = ({ buildings = [], selectedParcelId, onSelectBuilding }) => {
             const isSelected = selectedParcelId === building.parcelId;
             const isDisputed = hasDisputedFloor(building);
 
-            const strokeColor = isSelected ? '#f59e0b' : isDisputed ? '#dc2626' : '#2563eb';
-            const fillColor = isSelected ? '#fbbf24' : isDisputed ? '#ef4444' : '#3b82f6';
+            const palette = isSelected
+              ? PARCEL_COLORS.selected
+              : isDisputed
+                ? PARCEL_COLORS.disputed
+                : PARCEL_COLORS.registered;
 
             return (
               <Polygon
                 key={building.parcelId}
                 positions={positions}
                 pathOptions={{
-                  color: strokeColor,
-                  fillColor: fillColor,
+                  color: palette.stroke,
+                  fillColor: palette.fill,
                   fillOpacity: isSelected ? 0.65 : 0.4,
                   weight: isSelected ? 4 : 2,
                   dashArray: isDisputed ? '5, 5' : null
@@ -133,6 +148,13 @@ const MapView = ({ buildings = [], selectedParcelId, onSelectBuilding }) => {
             );
           })}
         </MapContainer>
+
+        {/* Tile loading overlay */}
+        {tilesLoading && (
+          <div className="absolute inset-0 z-[1000] pointer-events-none bg-paper/70 flex items-center justify-center">
+            <span className="text-xs text-ink-muted">Loading map tiles&hellip;</span>
+          </div>
+        )}
       </div>
 
       {/* Quiet bottom toolbar */}
@@ -140,15 +162,15 @@ const MapView = ({ buildings = [], selectedParcelId, onSelectBuilding }) => {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="text-ink">Legend</span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 bg-[#3b82f6]/50 border border-[#2563eb]" aria-hidden="true" />
+            <span className="w-2.5 h-2.5 bg-[#8ea3c2]/60 border border-[#54688c]" aria-hidden="true" />
             <span>Registered parcel</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 bg-[#ef4444]/50 border border-dashed border-[#dc2626]" aria-hidden="true" />
+            <span className="w-2.5 h-2.5 bg-[#b3655c]/60 border border-dashed border-[#84413a]" aria-hidden="true" />
             <span>Disputed parcel</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 bg-[#fbbf24]/70 border border-[#f59e0b]" aria-hidden="true" />
+            <span className="w-2.5 h-2.5 bg-[#c9a24a]/80 border border-[#8a6d2f]" aria-hidden="true" />
             <span>Active parcel</span>
           </div>
         </div>
