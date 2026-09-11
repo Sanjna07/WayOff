@@ -25,14 +25,6 @@ const Header = ({
 
   return (
     <header className="bg-sheet border-b border-rule sticky top-0 z-50">
-      {/* Department strip */}
-      <div className="bg-navy text-white/90 text-xs px-4 sm:px-6 py-1.5">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          <span>Government of India &middot; Department of Land Resources &amp; Urban Development</span>
-          <span className="hidden sm:inline">WGS 84 spatial framework &middot; EPSG:4326</span>
-        </div>
-      </div>
-
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Emblem and registry title */}
         <div className="flex items-center gap-3">
@@ -41,10 +33,10 @@ const Header = ({
           </div>
           <div>
             <h1 className="font-heading text-lg leading-tight text-navy">
-              National Cadastral Land Parcel Registry
+              WayOff <span className="text-ink-muted font-body text-sm">&middot; Cadastral Land Parcel Registry</span>
             </h1>
             <p className="text-xs text-ink-muted">
-              Vertical property records (ULPIN) &middot; {totalParcels} parcels on record &middot; {disputedCount} with title under dispute
+              Vertical property records (ULPIN) &middot; WGS 84 / EPSG:4326 &middot; {totalParcels} parcels on record &middot; {disputedCount} with title under dispute
             </p>
           </div>
         </div>
