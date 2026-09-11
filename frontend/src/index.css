@@ -79,3 +79,31 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #b1ab9e;
 }
+
+/* Print: emit only the cadastral record extract */
+@media print {
+  body {
+    background: #ffffff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-expand {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
