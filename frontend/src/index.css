@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* ── Surface palette (dark) ── */
+  --color-paper: #080b12;
+  --color-sheet: #0f1520;
+  --color-glass: rgba(12, 17, 28, 0.78);
+  --color-rule: rgba(255, 255, 255, 0.07);
+  --color-rule-strong: rgba(255, 255, 255, 0.14);
+
+  /* ── Text palette (light-on-dark) ── */
+  --color-ink: #e8ecf2;
+  --color-ink-muted: #8b95a5;
+  --color-ink-faint: #5a6577;
+
+  /* ── Accent: primary (cyan-sky) ── */
+  --color-navy: #38bdf8;
+  --color-navy-deep: #0ea5e9;
+  --color-navy-tint: rgba(56, 189, 248, 0.08);
+
+  /* ── Accent: selection (amber-gold) ── */
+  --color-gold: #fbbf24;
+  --color-gold-tint: rgba(251, 191, 36, 0.10);
+
+  /* ── Accent: danger (rose-red) ── */
+  --color-maroon: #f87171;
+  --color-maroon-tint: rgba(248, 113, 113, 0.08);
+
+  /* ── Typography ── */
+  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Glassmorphism panels ── */
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--color-rule);
+}
+.glass-strong {
+  background: rgba(12, 17, 28, 0.90);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 1px solid var(--color-rule-strong);
+}
+
+/* ── Scrollbars (dark) ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* ── Print ── */
+@media print {
+  body { background: #ffffff; color: #111; }
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+  .no-print { display: none !important; }
+  .print-expand { max-height: none !important; overflow: visible !important; }
+}
